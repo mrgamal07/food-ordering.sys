@@ -1,0 +1,87 @@
+CREATE DATABASE IF NOT EXISTS thali_spice CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE thali_spice;
+
+CREATE TABLE IF NOT EXISTS `Customer` (
+  `CustomerId` INT AUTO_INCREMENT PRIMARY KEY,
+  `FullName` VARCHAR(120) NOT NULL,
+  `Email` VARCHAR(160) NOT NULL UNIQUE,
+  `PasswordHash` VARCHAR(255) NOT NULL,
+  `Phone` VARCHAR(30) NULL,
+  `Address` VARCHAR(300) NULL,
+  `CreatedAt` DATETIME(6) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS `Admin` (
+  `AdminId` INT AUTO_INCREMENT PRIMARY KEY,
+  `FullName` VARCHAR(120) NOT NULL,
+  `Email` VARCHAR(160) NOT NULL UNIQUE,
+  `PasswordHash` VARCHAR(255) NOT NULL,
+  `CreatedAt` DATETIME(6) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS `Food_Category` (
+  `FoodCategoryId` INT AUTO_INCREMENT PRIMARY KEY,
+  `Name` VARCHAR(80) NOT NULL,
+  `Description` VARCHAR(300) NULL,
+  `IsActive` TINYINT(1) NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS `Food` (
+  `FoodId` INT AUTO_INCREMENT PRIMARY KEY,
+  `FoodCategoryId` INT NOT NULL,
+  `Name` VARCHAR(120) NOT NULL,
+  `Description` VARCHAR(600) NULL,
+  `Price` DECIMAL(10,2) NOT NULL,
+  `ImageUrl` VARCHAR(500) NULL,
+  `IsAvailable` TINYINT(1) NOT NULL DEFAULT 1,
+  `CreatedAt` DATETIME(6) NOT NULL,
+  CONSTRAINT `FK_Food_FoodCategory` FOREIGN KEY (`FoodCategoryId`) REFERENCES `Food_Category` (`FoodCategoryId`)
+);
+CREATE TABLE IF NOT EXISTS `Orders` (
+  `OrderId` INT AUTO_INCREMENT PRIMARY KEY,
+  `CustomerId` INT NOT NULL,
+  `OrderDate` DATETIME(6) NOT NULL,
+  `Status` VARCHAR(40) NOT NULL,
+  `TotalAmount` DECIMAL(10,2) NOT NULL,
+  `DeliveryAddress` VARCHAR(300) NOT NULL,
+  `PaymentStatus` VARCHAR(30) NOT NULL,
+  `PaymentMethod` VARCHAR(30) NULL,
+  CONSTRAINT `FK_Orders_Customer` FOREIGN KEY (`CustomerId`) REFERENCES `Customer` (`CustomerId`)
+);
+CREATE TABLE IF NOT EXISTS `Order_Details` (
+  `OrderDetailId` INT AUTO_INCREMENT PRIMARY KEY,
+  `OrderId` INT NOT NULL,
+  `FoodId` INT NOT NULL,
+  `Quantity` INT NOT NULL,
+  `UnitPrice` DECIMAL(10,2) NOT NULL,
+  `LineTotal` DECIMAL(10,2) NOT NULL,
+  CONSTRAINT `FK_OrderDetails_Orders` FOREIGN KEY (`OrderId`) REFERENCES `Orders` (`OrderId`) ON DELETE CASCADE,
+  CONSTRAINT `FK_OrderDetails_Food` FOREIGN KEY (`FoodId`) REFERENCES `Food` (`FoodId`)
+);
+CREATE TABLE IF NOT EXISTS `Payment` (
+  `PaymentId` INT AUTO_INCREMENT PRIMARY KEY,
+  `OrderId` INT NOT NULL UNIQUE,
+  `TransactionId` VARCHAR(160) NULL,
+  `PaymentMethod` VARCHAR(30) NOT NULL,
+  `Amount` DECIMAL(10,2) NOT NULL,
+  `Status` VARCHAR(30) NOT NULL,
+  `PaidAt` DATETIME(6) NULL,
+  `GatewayResponse` VARCHAR(2000) NULL,
+  CONSTRAINT `FK_Payment_Orders` FOREIGN KEY (`OrderId`) REFERENCES `Orders` (`OrderId`) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS `Inventory` (
+  `InventoryId` INT AUTO_INCREMENT PRIMARY KEY,
+  `FoodId` INT NOT NULL UNIQUE,
+  `QuantityInStock` INT NOT NULL,
+  `ReorderLevel` INT NOT NULL,
+  `UpdatedAt` DATETIME(6) NOT NULL,
+  CONSTRAINT `FK_Inventory_Food` FOREIGN KEY (`FoodId`) REFERENCES `Food` (`FoodId`) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS `Sold_Items` (
+  `SoldItemId` INT AUTO_INCREMENT PRIMARY KEY,
+  `OrderId` INT NOT NULL,
+  `FoodId` INT NOT NULL,
+  `Quantity` INT NOT NULL,
+  `SoldAt` DATETIME(6) NOT NULL,
+  `UnitPrice` DECIMAL(10,2) NOT NULL,
+  `TotalAmount` DECIMAL(10,2) NOT NULL,
+  CONSTRAINT `FK_SoldItems_Orders` FOREIGN KEY (`OrderId`) REFERENCES `Orders` (`OrderId`),
+  CONSTRAINT `FK_SoldItems_Food` FOREIGN KEY (`FoodId`) REFERENCES `Food` (`FoodId`)
+);

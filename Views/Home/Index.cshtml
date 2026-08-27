@@ -1,0 +1,36 @@
+﻿@model MenuViewModel
+@{ ViewData["Title"] = "Home"; }
+
+<section class="hero-panel mb-5">
+    <div class="hero-copy">
+        <div class="eyebrow">KATHMANDU · NEPAL</div>
+        <h1>Big-hearted food,<br><span>served family style.</span></h1>
+        <p>Seasonal Nepali plates, hand-folded momos, and recipes that taste like home. Order ahead or settle in with us.</p>
+        <a class="btn btn-coral btn-lg rounded-pill px-4" href="#menu">Explore the menu <span>↗</span></a>
+    </div>
+    <div class="hero-art"><div class="hero-badge"><strong>12</strong><span>years of<br>good food</span></div></div>
+</section>
+
+<section id="menu" class="menu-section">
+    <div class="section-kicker">FROM OUR KITCHEN</div>
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div><h2 class="section-title mb-1">Find your next favorite.</h2><p class="muted mb-0">Every dish is made to order, with a little extra love.</p></div>
+        <form class="search-form" asp-controller="Home" asp-action="Index" method="get"><input name="search" value="@Model.Search" placeholder="Search dishes..." /><button type="submit">⌕</button></form>
+    </div>
+    <div class="category-row mb-4">
+        <a class="category-pill @(Model.CategoryId == null ? "active" : "")" asp-controller="Home" asp-action="Index">All plates</a>
+        @foreach (var category in Model.Categories) { <a class="category-pill @(Model.CategoryId == category.FoodCategoryId ? "active" : "")" asp-route-categoryId="@category.FoodCategoryId">@category.Name</a> }
+    </div>
+    <div class="row g-4">
+        @foreach (var food in Model.Foods)
+        {
+            <div class="col-md-6 col-xl-4">
+                <article class="food-card h-100">
+                    <a asp-action="Food" asp-route-id="@food.FoodId" class="food-image-wrap"><img src="@(food.ImageUrl ?? "/images/hero-food.jpg")" class="food-image" alt="@food.Name" /><span class="food-tag">@food.Category.Name</span></a>
+                    <div class="p-4 d-flex flex-column h-100"><div class="d-flex justify-content-between gap-3"><h3 class="food-name"><a asp-action="Food" asp-route-id="@food.FoodId">@food.Name</a></h3><span class="food-price">Rs. @food.Price.ToString("N0")</span></div><p class="muted small flex-grow-1">@food.Description</p><form asp-controller="Cart" asp-action="Add" method="post"><input type="hidden" name="foodId" value="@food.FoodId" /><button class="btn btn-outline-dark rounded-pill w-100" type="submit">Add to order <span>+</span></button></form></div>
+                </article>
+            </div>
+        }
+    </div>
+    @if (!Model.Foods.Any()) { <div class="empty-state">No plates matched that search. Try another flavor.</div> }
+</section>

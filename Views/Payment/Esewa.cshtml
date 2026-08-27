@@ -1,0 +1,3 @@
+@model EsewaForm
+@{ ViewData["Title"] = "Secure payment"; }
+<div class="auth-shell text-center"><div class="auth-card"><div class="section-kicker">SECURE CHECKOUT</div><h1 class="section-title mt-2">Taking you to eSewa.</h1><p class="muted">Your payment details stay with eSewa. Continue to open their secure checkout.</p><form id="esewa-form" action="@Model.Action" method="post">@foreach (var field in Model.Fields) { <input type="hidden" name="@field.Key" value="@field.Value" /> }<button class="btn btn-coral rounded-pill px-4" type="submit">Continue to eSewa →</button></form></div></div>
