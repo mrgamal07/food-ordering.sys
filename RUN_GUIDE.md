@@ -189,6 +189,6 @@ Ctrl+C
 | `dotnet is not recognized` | Install the .NET 8 SDK and reopen the terminal. |
 | Port already in use | Stop the previous process or run `dotnet run --urls http://localhost:5050`. |
 | MySQL connection failure | Check that MySQL is running and verify server, port, database, username, and password. |
-| Empty menu after a restart | You are using in-memory demo mode; configure MySQL for persistent data. |
+| Empty menu after a restart | Confirm that MySQL is running on port 3307 and that the application is using the correct database and password. |
 | Khalti does not open | Add the Khalti secret key and set a publicly reachable HTTPS `App:BaseUrl`. |
 | HTTPS certificate warning | Use the HTTP URL shown by `dotnet run` or trust the development certificate. |

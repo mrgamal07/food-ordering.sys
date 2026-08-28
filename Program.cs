@@ -27,10 +27,9 @@ builder.Services.AddScoped<PaymentGatewayService>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    if (!string.IsNullOrWhiteSpace(connectionString))
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
-    else
-        options.UseInMemoryDatabase("RestaurantDemoDb");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        throw new InvalidOperationException("Configure ConnectionStrings:DefaultConnection for MySQL before starting the application.");
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
 });
 
 var app = builder.Build();

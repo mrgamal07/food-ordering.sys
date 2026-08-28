@@ -10,15 +10,7 @@ The eSewa flow builds a signed ePay v2 form using the configured product code an
 
 ## Run locally
 
-The project falls back to an EF Core in-memory database when `ConnectionStrings:DefaultConnection` is blank, so the demo can be started immediately:
-
-```bash
-export PATH="$HOME/.dotnet:$PATH"
-cd SingleRestaurantOrdering
-dotnet run
-```
-
-The seeded development accounts are:
+The project is configured to use MySQL on `localhost:3307`. Set the local password in `appsettings.Development.json` before starting the application. The seeded development account is:
 
 | Account | Email | Password |
 | --- | --- | --- |
