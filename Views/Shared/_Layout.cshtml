@@ -24,7 +24,7 @@
                     @if (User.IsInRole("Admin")) { <li><a class="nav-link" asp-controller="Admin" asp-action="Index">Dashboard</a></li> }
                     <li><a class="nav-link cart-link" asp-controller="Cart" asp-action="Index">Cart <span class="cart-dot">@CartSession.Get(Context).Values.Sum()</span></a></li>
                     @if (User.Identity?.IsAuthenticated == true) { <li><form asp-controller="Auth" asp-action="Logout" method="post"><button class="btn btn-link nav-link px-0" type="submit">Sign out</button></form></li> }
-                    else { <li><a class="btn btn-dark rounded-pill px-4" asp-controller="Auth" asp-action="Login">Sign in</a></li> }
+                    else { <li><a class="nav-link fw-bold" asp-controller="Auth" asp-action="Register">Register</a></li><li><a class="btn btn-dark rounded-pill px-4" asp-controller="Auth" asp-action="Login">Sign in</a></li> }
                 </ul>
             </div>
         </div>
