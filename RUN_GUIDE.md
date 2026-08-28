@@ -31,11 +31,17 @@ cd food-ordering.sys
 
 If you download the ZIP file instead, extract it and open the terminal inside the extracted `SingleRestaurantOrdering` folder.
 
-## 3. Quick demo mode without MySQL
+## 3. Configure MySQL on port 3307
 
-The current `appsettings.json` intentionally has an empty `DefaultConnection`. When it is empty, the application uses an EF Core in-memory database, seeds demo menu data, and runs without MySQL.
+The project is configured for a local MySQL server at `localhost:3307`, using the database name `thali_spice` and the `root` user. Open `appsettings.json` and replace `YOUR_MYSQL_PASSWORD` with your actual MySQL password:
 
-Restore dependencies and start the application:
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Server=localhost;Port=3307;Database=thali_spice;User=root;Password=YOUR_MYSQL_PASSWORD;AllowPublicKeyRetrieval=True;SslMode=None;"
+}
+```
+
+Run the SQL from `Database/schema.sql` in MySQL Workbench first, or let EF Core create missing tables when the application starts. Then restore dependencies and start the application:
 
 ```bash
 dotnet restore
@@ -56,7 +62,7 @@ Open the HTTPS URL in your browser. If the browser displays a development-certif
 dotnet dev-certs https --trust
 ```
 
-The in-memory database is reset whenever the application restarts, which is useful for testing but not for production.
+With MySQL configured, customer accounts, orders, inventory, payments, and sold-item records remain available after the application restarts.
 
 ## 4. Test the customer workflow
 
@@ -95,9 +101,9 @@ The admin area includes:
 - Inventory updates at `/Admin/Inventory`.
 - Sold-item reporting at `/Admin/SoldItems`.
 
-## 6. Run with MySQL
+## 6. Run with MySQL Workbench
 
-Start MySQL Server and create a database. You can run the included script from a MySQL client:
+Start MySQL Server on port `3307` and create the database. You can run the included script from a MySQL client:
 
 ```bash
 mysql -u root -p < Database/schema.sql
@@ -113,7 +119,7 @@ Edit `appsettings.json` and replace the empty connection string:
 
 ```json
 "ConnectionStrings": {
-  "DefaultConnection": "Server=localhost;Port=3306;Database=thali_spice;User=root;Password=YOUR_MYSQL_PASSWORD;"
+  "DefaultConnection": "Server=localhost;Port=3307;Database=thali_spice;User=root;Password=YOUR_MYSQL_PASSWORD;AllowPublicKeyRetrieval=True;SslMode=None;"
 }
 ```
 

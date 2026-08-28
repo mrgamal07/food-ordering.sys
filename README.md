@@ -28,11 +28,11 @@ A customer account can be created at `/Auth/Register`.
 
 ## MySQL configuration
 
-Set the connection string before starting the application. EF Core's `EnsureCreated` creates the database tables on first launch for a fresh database; for production, replace it with reviewed migrations.
+Set the connection string before starting the application. This project is configured for the user’s local MySQL Workbench server on port `3307`. Replace `YOUR_MYSQL_PASSWORD` with the password for the MySQL user configured in Workbench. EF Core's `EnsureCreated` creates the database tables on first launch for a fresh database; for production, replace it with reviewed migrations.
 
 ```json
 "ConnectionStrings": {
-  "DefaultConnection": "Server=localhost;Port=3306;Database=thali_spice;User=root;Password=your-password;"
+  "DefaultConnection": "Server=localhost;Port=3307;Database=thali_spice;User=root;Password=YOUR_MYSQL_PASSWORD;AllowPublicKeyRetrieval=True;SslMode=None;"
 }
 ```
 
