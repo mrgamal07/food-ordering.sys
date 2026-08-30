@@ -85,3 +85,27 @@ CREATE TABLE IF NOT EXISTS `Sold_Items` (
   CONSTRAINT `FK_SoldItems_Orders` FOREIGN KEY (`OrderId`) REFERENCES `Orders` (`OrderId`),
   CONSTRAINT `FK_SoldItems_Food` FOREIGN KEY (`FoodId`) REFERENCES `Food` (`FoodId`)
 );
+
+-- Prevent reusing an eSewa transaction UUID.
+-- Run the duplicate check first. It should return zero rows before adding the index.
+SELECT `TransactionId`, COUNT(*) AS `DuplicateCount`
+FROM `Payment`
+WHERE `TransactionId` IS NOT NULL
+GROUP BY `TransactionId`
+HAVING COUNT(*) > 1;
+
+SET @transaction_uuid_index_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.statistics
+  WHERE table_schema = DATABASE()
+    AND table_name = 'Payment'
+    AND index_name = 'UX_Payment_TransactionId'
+);
+SET @create_transaction_uuid_index := IF(
+  @transaction_uuid_index_exists = 0,
+  'ALTER TABLE `Payment` ADD UNIQUE INDEX `UX_Payment_TransactionId` (`TransactionId`)',
+  'SELECT 1'
+);
+PREPARE transaction_uuid_index_statement FROM @create_transaction_uuid_index;
+EXECUTE transaction_uuid_index_statement;
+DEALLOCATE PREPARE transaction_uuid_index_statement;

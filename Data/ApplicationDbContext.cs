@@ -23,6 +23,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Customer>().HasIndex(x => x.Email).IsUnique();
         modelBuilder.Entity<Admin>().HasIndex(x => x.Email).IsUnique();
         modelBuilder.Entity<Payment>().HasIndex(x => x.OrderId).IsUnique();
+        modelBuilder.Entity<Payment>().HasIndex(x => x.TransactionId).IsUnique();
         modelBuilder.Entity<Food>().Property(x => x.Price).HasPrecision(10, 2);
         modelBuilder.Entity<Order>().Property(x => x.TotalAmount).HasPrecision(10, 2);
         modelBuilder.Entity<OrderDetail>().Property(x => x.UnitPrice).HasPrecision(10, 2);
