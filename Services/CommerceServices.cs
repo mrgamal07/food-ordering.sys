@@ -47,8 +47,8 @@ public class PaymentGatewayService
             ["amount"] = total, ["tax_amount"] = "0", ["total_amount"] = total,
             ["transaction_uuid"] = transactionUuid, ["product_code"] = productCode,
             ["product_service_charge"] = "0", ["product_delivery_charge"] = "0",
-            ["success_url"] = $"{callbackBaseUrl}/Payment/Success?orderId={order.OrderId}",
-            ["failure_url"] = $"{callbackBaseUrl}/Payment/Failure?orderId={order.OrderId}",
+            ["success_url"] = $"{callbackBaseUrl}/Payment/Success/{order.OrderId}",
+            ["failure_url"] = $"{callbackBaseUrl}/Payment/Failure/{order.OrderId}",
             ["signed_field_names"] = signedFields, ["signature"] = signature
         };
         return new EsewaForm(config["Endpoint"] ?? "https://rc-epay.esewa.com.np/api/epay/main/v2/form", fields);

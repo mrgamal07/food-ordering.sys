@@ -50,7 +50,7 @@ public class PaymentController : Controller
     }
 
     [AllowAnonymous]
-    [HttpGet]
+    [HttpGet("Payment/Success/{orderId:int}")]
     public async Task<IActionResult> Success(int orderId, string? data)
     {
         var order = await _db.Orders.Include(x => x.Details).SingleOrDefaultAsync(x => x.OrderId == orderId);
@@ -82,6 +82,7 @@ public class PaymentController : Controller
     }
 
     [AllowAnonymous]
+    [HttpGet("Payment/Failure/{orderId:int}")]
     public async Task<IActionResult> Failure(int orderId)
     {
         var order = await _db.Orders.SingleOrDefaultAsync(x => x.OrderId == orderId);
