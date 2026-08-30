@@ -54,8 +54,8 @@ public class AuthController : Controller
         customer.PasswordHash = new PasswordHasher<Customer>().HashPassword(customer, model.Password);
         _db.Customers.Add(customer);
         await _db.SaveChangesAsync();
-        await SignInAsync(customer.CustomerId.ToString(), customer.Email, customer.FullName, "Customer", true);
-        return RedirectToAction("Index", "Home");
+        TempData["SuccessMessage"] = "Registration successful. Please sign in with your new email and password.";
+        return RedirectToAction(nameof(Login));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
