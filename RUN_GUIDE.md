@@ -192,3 +192,62 @@ Ctrl+C
 | Empty menu after a restart | Confirm that MySQL is running on port 3307 and that the application is using the correct database and password. |
 | Khalti does not open | Add the Khalti secret key and set a publicly reachable HTTPS `App:BaseUrl`. |
 | HTTPS certificate warning | Use the HTTP URL shown by `dotnet run` or trust the development certificate. |
+
+## 11. Test the eSewa sandbox payment flow
+
+The eSewa payment request now creates a fresh transaction UUID for every payment attempt. The UUID format is similar to `ORDER-42-9f7e...`; it contains only letters, numbers, and hyphens, which satisfies eSewa’s transaction UUID format. The UUID is stored in the `Payment.TransactionId` column before the customer is redirected to eSewa.
+
+### Prepare local callback URLs
+
+For local browser testing, the application is configured with:
+
+```json
+"App": {
+  "BaseUrl": "http://localhost:5062"
+}
+```
+
+Keep the ASP.NET Core terminal running. The browser can return to localhost after the eSewa sandbox payment. For a deployed environment, change `App:BaseUrl` to the public HTTPS URL of the deployed application.
+
+### Start a fresh test order
+
+1. Start MySQL and confirm the application connection works.
+2. Start the application with `dotnet run`.
+3. Open `http://localhost:5062`.
+4. Register a new customer or sign in to an existing customer account.
+5. Add a food item to the cart.
+6. Open the cart and continue to checkout.
+7. Select **eSewa** and place the order.
+8. The application saves a new payment row and redirects the browser to the configured eSewa sandbox form.
+9. On eSewa, sign in with the sandbox eSewa ID and password provided by eSewa.
+10. Complete the sandbox verification step. The eSewa UAT documentation states that the testing token is `123456`.
+11. Confirm the payment in eSewa.
+12. eSewa redirects the browser to `/Payment/Success` with its Base64-encoded response.
+13. The application verifies the eSewa response signature, transaction UUID, product code, amount, and `COMPLETE` status before marking the order as paid.
+14. Open **My orders** and confirm that the order status is `Confirmed` and payment status is `Paid`.
+
+### Verify the UUID in MySQL Workbench
+
+After selecting eSewa at checkout, inspect the payment record:
+
+```sql
+USE thali_spice;
+SELECT PaymentId, OrderId, TransactionId, PaymentMethod, Amount, Status, PaidAt
+FROM Payment
+ORDER BY PaymentId DESC
+LIMIT 5;
+```
+
+Each new eSewa attempt should have a different `TransactionId`. Do not reuse a previous transaction UUID, and do not repeatedly refresh an old eSewa form.
+
+### Fixing `Duplicate transaction UUID`
+
+That error means eSewa received a transaction UUID that it has already seen. The corrected application no longer uses only `ORDER-{OrderId}`. It creates a new UUID with `Guid.NewGuid()` for every new eSewa initiation and stores it before rendering the handoff form.
+
+After pulling the latest code, stop and restart the application, create a new order or start a new eSewa attempt, and do not reuse an old browser tab or previously submitted payment form. If the same error remains, inspect the latest `Payment.TransactionId` value in Workbench and confirm that the new attempt contains the random suffix.
+
+The application also rejects unsigned or mismatched callbacks. It will not mark an order as paid merely because someone visits the success URL; the returned eSewa response must have a valid signature and must match the stored UUID, product code, and total amount.
+
+### Sandbox versus production
+
+The repository is configured for the eSewa UAT endpoint and the UAT product code `EPAYTEST`. UAT credentials and balances are separate from real eSewa accounts. Before accepting real money, replace the endpoint, product code, secret key, and public HTTPS callback URL with the merchant credentials issued for production by eSewa.

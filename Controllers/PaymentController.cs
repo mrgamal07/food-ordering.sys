@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +18,27 @@ public class PaymentController : Controller
     {
         var order = await _db.Orders.Include(x => x.Customer).SingleOrDefaultAsync(x => x.OrderId == orderId && x.CustomerId == CurrentCustomerId());
         if (order == null) return NotFound();
-        if (order.PaymentMethod == "eSewa") return View("Esewa", _gateways.BuildEsewaForm(order, BaseUrl()));
+        if (order.PaymentStatus == "Paid") return RedirectToAction("Details", "Orders", new { id = orderId });
+
+        if (order.PaymentMethod == "eSewa")
+        {
+            var payment = await _db.Payments.SingleOrDefaultAsync(x => x.OrderId == orderId);
+            var transactionUuid = _gateways.CreateEsewaTransactionUuid(order.OrderId);
+            if (payment == null)
+            {
+                payment = new Payment { OrderId = order.OrderId };
+                _db.Payments.Add(payment);
+            }
+            payment.PaymentMethod = "eSewa";
+            payment.Amount = order.TotalAmount;
+            payment.Status = "Initiated";
+            payment.TransactionId = transactionUuid;
+            payment.PaidAt = null;
+            payment.GatewayResponse = null;
+            await _db.SaveChangesAsync();
+            return View("Esewa", _gateways.BuildEsewaForm(order, BaseUrl(), transactionUuid));
+        }
+
         if (order.PaymentMethod == "Khalti")
         {
             var url = $"{BaseUrl()}/Payment/KhaltiCallback?orderId={order.OrderId}";
@@ -36,10 +55,27 @@ public class PaymentController : Controller
     {
         var order = await _db.Orders.Include(x => x.Details).SingleOrDefaultAsync(x => x.OrderId == orderId);
         if (order == null) return NotFound();
-        order.PaymentStatus = "Paid"; order.Status = "Confirmed";
-        var payment = await _db.Payments.SingleOrDefaultAsync(x => x.OrderId == orderId) ?? new Payment { OrderId = orderId };
-        payment.PaymentMethod = "eSewa"; payment.Amount = order.TotalAmount; payment.Status = "Completed"; payment.PaidAt = DateTime.UtcNow; payment.TransactionId = $"ORDER-{orderId}"; payment.GatewayResponse = data;
-        if (payment.PaymentId == 0) _db.Payments.Add(payment);
+        var payment = await _db.Payments.SingleOrDefaultAsync(x => x.OrderId == orderId);
+        if (payment == null || string.IsNullOrWhiteSpace(payment.TransactionId) || string.IsNullOrWhiteSpace(data))
+        {
+            TempData["PaymentError"] = "The eSewa payment response could not be verified.";
+            return RedirectToAction("Details", "Orders", new { id = orderId });
+        }
+
+        if (!_gateways.TryVerifyEsewaResponse(data, payment.TransactionId, order.TotalAmount, out var callback, out var error))
+        {
+            TempData["PaymentError"] = error;
+            return RedirectToAction("Details", "Orders", new { id = orderId });
+        }
+
+        order.PaymentStatus = "Paid";
+        order.Status = "Confirmed";
+        payment.PaymentMethod = "eSewa";
+        payment.Amount = order.TotalAmount;
+        payment.Status = "Completed";
+        payment.PaidAt = DateTime.UtcNow;
+        payment.TransactionId = callback!.TransactionUuid;
+        payment.GatewayResponse = data;
         await RecordSoldItemsAsync(order);
         await _db.SaveChangesAsync();
         return RedirectToAction("Details", "Orders", new { id = orderId });
@@ -50,7 +86,7 @@ public class PaymentController : Controller
     {
         var order = await _db.Orders.SingleOrDefaultAsync(x => x.OrderId == orderId);
         if (order == null) return NotFound();
-        order.PaymentStatus = "Failed";
+        if (order.PaymentStatus != "Paid") order.PaymentStatus = "Failed";
         await _db.SaveChangesAsync();
         return RedirectToAction("Details", "Orders", new { id = orderId });
     }
@@ -60,7 +96,7 @@ public class PaymentController : Controller
     {
         var order = await _db.Orders.Include(x => x.Details).SingleOrDefaultAsync(x => x.OrderId == orderId);
         if (order == null) return NotFound();
-        var verified = string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase) || await _gateways.VerifyKhaltiAsync(pidx ?? string.Empty);
+        var verified = await _gateways.VerifyKhaltiAsync(pidx ?? string.Empty);
         if (verified)
         {
             order.PaymentStatus = "Paid"; order.Status = "Confirmed";
@@ -69,6 +105,10 @@ public class PaymentController : Controller
             if (payment.PaymentId == 0) _db.Payments.Add(payment);
             await RecordSoldItemsAsync(order);
             await _db.SaveChangesAsync();
+        }
+        else
+        {
+            TempData["PaymentError"] = "Khalti could not verify this payment.";
         }
         return RedirectToAction("Details", "Orders", new { id = orderId });
     }
@@ -79,5 +119,5 @@ public class PaymentController : Controller
         foreach (var detail in order.Details) _db.SoldItems.Add(new SoldItem { OrderId = order.OrderId, FoodId = detail.FoodId, Quantity = detail.Quantity, UnitPrice = detail.UnitPrice, TotalAmount = detail.LineTotal });
     }
     private int CurrentCustomerId() => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-    private string BaseUrl() => _db.Database.ProviderName?.Contains("InMemory") == true ? $"{Request.Scheme}://{Request.Host}" : (HttpContext.RequestServices.GetRequiredService<IConfiguration>()["App:BaseUrl"] ?? $"{Request.Scheme}://{Request.Host}");
+    private string BaseUrl() => HttpContext.RequestServices.GetRequiredService<IConfiguration>()["App:BaseUrl"] ?? $"{Request.Scheme}://{Request.Host}";
 }
