@@ -1,4 +1,75 @@
 @model Order
-@{ ViewData["Title"] = $"Order #{Model.OrderId}"; var stages = new[] { "Confirmed", "Preparing", "Out for delivery", "Delivered" }; }
-<div class="d-flex justify-content-between align-items-end mb-4"><div><div class="section-kicker">ORDER TRACKING</div><h1 class="section-title mt-2 mb-0">Order #@Model.OrderId.ToString("D4")</h1><p class="muted mt-2 mb-0">@Model.OrderDate.ToLocalTime().ToString("dd MMM yyyy · h:mm tt")</p></div><span class="status-chip">@Model.Status</span></div>
-<div class="row g-4"><div class="col-lg-7"><div class="panel mb-4"><h2 class="h5 mb-4">On its way to you</h2><div class="timeline">@foreach (var stage in stages) { var complete = Array.IndexOf(stages, stage) <= Array.IndexOf(stages, Model.Status); <div class="timeline-item" style="opacity:@(complete ? "1" : ".42")"><strong>@stage</strong><br><small>@(complete ? "Completed" : "Coming up next")</small></div> }</div></div><div class="panel"><h2 class="h5 mb-3">Delivery details</h2><p class="muted mb-0">@Model.DeliveryAddress</p></div></div><div class="col-lg-5"><div class="panel"><h2 class="h5 mb-3">Your plates</h2>@foreach (var line in Model.Details) { <div class="d-flex justify-content-between gap-3 mb-3"><span>@line.Quantity × @line.Food.Name</span><strong>Rs. @line.LineTotal.ToString("N0")</strong></div> }<hr /><div class="d-flex justify-content-between"><strong>Total</strong><strong class="food-price">Rs. @Model.TotalAmount.ToString("N0")</strong></div><div class="mt-3 small muted">Payment: @Model.PaymentMethod · <span class="@(Model.PaymentStatus == "Paid" ? "text-success" : "")">@Model.PaymentStatus</span></div>@if (Model.PaymentStatus != "Paid" && Model.PaymentMethod != "Cash on Delivery") { <a asp-controller="Payment" asp-action="Start" asp-route-orderId="@Model.OrderId" class="btn btn-coral rounded-pill w-100 mt-4">Complete payment</a> }</div></div></div>
+@{
+    ViewData["Title"] = $"Order #{Model.OrderId}";
+    var stages = new[] { "Confirmed", "Preparing", "Out for delivery", "Delivered" };
+}
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <div class="section-kicker">ORDER TRACKING</div>
+        <h1 class="section-title mt-2 mb-0">Order #@Model.OrderId.ToString("D4")</h1>
+        <p class="muted mt-2 mb-0">@Model.OrderDate.ToLocalTime().ToString("dd MMM yyyy · h:mm tt")</p>
+    </div>
+    <span class="status-chip">@Model.Status</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="panel mb-4">
+            <h2 class="h5 mb-4">On its way to you</h2>
+            <div class="timeline">
+                @foreach (var stage in stages)
+                {
+                    var complete = Array.IndexOf(stages, stage) <= Array.IndexOf(stages, Model.Status);
+                    <div class="timeline-item" style="opacity:@(complete ? "1" : ".42")">
+                        <strong>@stage</strong><br />
+                        <small>@(complete ? "Completed" : "Coming up next")</small>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="panel">
+            <h2 class="h5 mb-3">Delivery details</h2>
+            <p class="muted mb-0">@Model.DeliveryAddress</p>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="panel">
+            <h2 class="h5 mb-3">Your plates</h2>
+            @foreach (var line in Model.Details)
+            {
+                <div class="d-flex justify-content-between gap-3 mb-3">
+                    <span>@line.Quantity × @line.Food.Name</span>
+                    <strong>Rs. @line.LineTotal.ToString("N0")</strong>
+                </div>
+            }
+            <hr />
+            <div class="d-flex justify-content-between">
+                <strong>Total</strong>
+                <strong class="food-price">Rs. @Model.TotalAmount.ToString("N0")</strong>
+            </div>
+            <div class="mt-3 small muted">
+                Payment method: @Model.PaymentMethod
+            </div>
+
+            @if (Model.PaymentStatus == "Paid")
+            {
+                <div class="alert alert-success mt-4 mb-0">
+                    <strong>Payment completed.</strong><br />
+                    This order has been paid successfully. No further payment is required.
+                </div>
+            }
+            else
+            {
+                <div class="mt-2 small @(Model.PaymentStatus == "Failed" ? "text-danger" : "muted")">
+                    Payment status: @Model.PaymentStatus
+                </div>
+                @if (Model.PaymentMethod != "Cash on Delivery")
+                {
+                    <a asp-controller="Payment" asp-action="Start" asp-route-orderId="@Model.OrderId" class="btn btn-coral rounded-pill w-100 mt-4">Complete payment</a>
+                }
+            }
+        </div>
+    </div>
+</div>
