@@ -1,0 +1,29 @@
+@model PaymentSuccessViewModel
+@{ ViewData["Title"] = "Payment successful"; }
+
+<div class="auth-shell">
+    <div class="auth-card text-center">
+        <div class="section-kicker text-success">PAYMENT CONFIRMED</div>
+        <h1 class="section-title mt-2">Payment successful.</h1>
+        <p class="muted">eSewa verified your payment. Your food order is now confirmed.</p>
+        <div class="panel text-start mt-4">
+            <div class="d-flex justify-content-between mb-2"><span class="muted">Order ID</span><strong>#@Model.OrderId</strong></div>
+            <div class="d-flex justify-content-between mb-2"><span class="muted">Payment ID</span><strong>#@Model.PaymentId</strong></div>
+            <div class="d-flex justify-content-between mb-2"><span class="muted">Amount paid</span><strong class="food-price">Rs. @Model.Amount.ToString("N2")</strong></div>
+            <div class="d-flex justify-content-between mb-2"><span class="muted">Method</span><strong>@Model.PaymentMethod</strong></div>
+            <div class="d-flex justify-content-between"><span class="muted">Status</span><strong class="text-success">PAID</strong></div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.TransactionId))
+        {
+            <p class="small muted text-break mt-3 mb-0">Transaction: @Model.TransactionId</p>
+        }
+        @if (Model.PaidAt.HasValue)
+        {
+            <p class="small muted mb-0">Paid at: @Model.PaidAt.Value.ToLocalTime().ToString("dd MMM yyyy, h:mm tt")</p>
+        }
+        <div class="d-flex gap-2 justify-content-center mt-4">
+            <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-coral rounded-pill">View order</a>
+            <a asp-controller="Orders" asp-action="Index" class="btn btn-outline-dark rounded-pill">My orders</a>
+        </div>
+    </div>
+</div>

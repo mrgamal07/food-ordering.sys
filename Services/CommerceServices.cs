@@ -72,7 +72,7 @@ public class PaymentGatewayService
             var fields = signedFieldNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var message = string.Join(",", fields.Select(field => $"{field}={ReadField(root, field)}"));
             var expectedSignature = CreateSignature(_configuration["Payments:eSewa:SecretKey"] ?? "8gBm/:&EnhH.1/q", message);
-            var amount = root.GetProperty("total_amount").GetDecimal();
+            var amount = ReadDecimal(root, "total_amount");
             if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expectedSignature), Encoding.UTF8.GetBytes(returnedSignature)))
             {
                 error = "eSewa response signature validation failed.";
@@ -96,11 +96,19 @@ public class PaymentGatewayService
             callback = new EsewaCallback(transactionCode, status, amount, transactionUuid, productCode, returnedSignature);
             return string.Equals(status, "COMPLETE", StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (ex is FormatException or JsonException or KeyNotFoundException)
+        catch (Exception ex) when (ex is FormatException or JsonException or KeyNotFoundException or InvalidOperationException)
         {
             error = "The eSewa callback data was invalid.";
             return false;
         }
+    }
+
+    private static decimal ReadDecimal(JsonElement root, string field)
+    {
+        var value = root.GetProperty(field);
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number)) return number;
+        if (value.ValueKind == JsonValueKind.String && decimal.TryParse(value.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var textNumber)) return textNumber;
+        throw new FormatException($"eSewa field '{field}' was not a valid amount.");
     }
 
     private static string ReadField(JsonElement root, string field) => field switch

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SingleRestaurantOrdering.Data;
 using SingleRestaurantOrdering.Models;
 using SingleRestaurantOrdering.Services;
+using SingleRestaurantOrdering.ViewModels;
 
 namespace SingleRestaurantOrdering.Controllers;
 
@@ -57,16 +58,10 @@ public class PaymentController : Controller
         if (order == null) return NotFound();
         var payment = await _db.Payments.SingleOrDefaultAsync(x => x.OrderId == orderId);
         if (payment == null || string.IsNullOrWhiteSpace(payment.TransactionId) || string.IsNullOrWhiteSpace(data))
-        {
-            TempData["PaymentError"] = "The eSewa payment response could not be verified.";
-            return RedirectToAction("Details", "Orders", new { id = orderId });
-        }
+            return RedirectToFailure(order, payment, "The eSewa payment response was missing or could not be verified.");
 
         if (!_gateways.TryVerifyEsewaResponse(data, payment.TransactionId, order.TotalAmount, out var callback, out var error))
-        {
-            TempData["PaymentError"] = error;
-            return RedirectToAction("Details", "Orders", new { id = orderId });
-        }
+            return RedirectToFailure(order, payment, error);
 
         order.PaymentStatus = "Paid";
         order.Status = "Confirmed";
@@ -78,18 +73,66 @@ public class PaymentController : Controller
         payment.GatewayResponse = data;
         await RecordSoldItemsAsync(order);
         await _db.SaveChangesAsync();
-        return RedirectToAction("Details", "Orders", new { id = orderId });
+
+        return RedirectToAction(nameof(SuccessResult), new
+        {
+            orderId = order.OrderId,
+            paymentId = payment.PaymentId,
+            amount = payment.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("Payment/SuccessResult")]
+    public async Task<IActionResult> SuccessResult(int orderId, int paymentId, decimal amount)
+    {
+        var payment = await _db.Payments.AsNoTracking().SingleOrDefaultAsync(x => x.PaymentId == paymentId && x.OrderId == orderId);
+        if (payment == null || payment.Status != "Completed") return RedirectToAction(nameof(FailureResult), new { orderId, paymentId, amount, reason = "The payment record could not be confirmed." });
+        return View("Success", new PaymentSuccessViewModel
+        {
+            OrderId = orderId,
+            PaymentId = payment.PaymentId,
+            Amount = payment.Amount,
+            PaymentMethod = payment.PaymentMethod,
+            TransactionId = payment.TransactionId,
+            PaidAt = payment.PaidAt
+        });
     }
 
     [AllowAnonymous]
     [HttpGet("Payment/Failure/{orderId:int}")]
-    public async Task<IActionResult> Failure(int orderId)
+    public async Task<IActionResult> Failure(int orderId, string? data)
     {
         var order = await _db.Orders.SingleOrDefaultAsync(x => x.OrderId == orderId);
         if (order == null) return NotFound();
-        if (order.PaymentStatus != "Paid") order.PaymentStatus = "Failed";
-        await _db.SaveChangesAsync();
-        return RedirectToAction("Details", "Orders", new { id = orderId });
+        var payment = await _db.Payments.SingleOrDefaultAsync(x => x.OrderId == orderId);
+        if (order.PaymentStatus != "Paid")
+        {
+            order.PaymentStatus = "Failed";
+            if (payment != null) payment.Status = "Failed";
+            await _db.SaveChangesAsync();
+        }
+        return RedirectToAction(nameof(FailureResult), new
+        {
+            orderId,
+            paymentId = payment?.PaymentId ?? 0,
+            amount = payment?.Amount ?? order.TotalAmount,
+            reason = "eSewa did not complete the payment. No successful payment was recorded."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("Payment/FailureResult")]
+    public IActionResult FailureResult(int orderId, int paymentId, decimal amount, string? reason)
+    {
+        return View("Failure", new PaymentFailureViewModel
+        {
+            OrderId = orderId,
+            PaymentId = paymentId,
+            Amount = amount,
+            PaymentMethod = "eSewa",
+            Reason = string.IsNullOrWhiteSpace(reason) ? "The payment could not be completed or verified." : reason
+        });
     }
 
     [AllowAnonymous]
@@ -106,13 +149,18 @@ public class PaymentController : Controller
             if (payment.PaymentId == 0) _db.Payments.Add(payment);
             await RecordSoldItemsAsync(order);
             await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(SuccessResult), new { orderId, paymentId = payment.PaymentId, amount = payment.Amount });
         }
-        else
-        {
-            TempData["PaymentError"] = "Khalti could not verify this payment.";
-        }
-        return RedirectToAction("Details", "Orders", new { id = orderId });
+        return RedirectToAction(nameof(FailureResult), new { orderId, paymentId = 0, amount = order.TotalAmount, reason = "Khalti could not verify this payment." });
     }
+
+    private IActionResult RedirectToFailure(Order order, Payment? payment, string reason) => RedirectToAction(nameof(FailureResult), new
+    {
+        orderId = order.OrderId,
+        paymentId = payment?.PaymentId ?? 0,
+        amount = payment?.Amount ?? order.TotalAmount,
+        reason
+    });
 
     private async Task RecordSoldItemsAsync(Order order)
     {

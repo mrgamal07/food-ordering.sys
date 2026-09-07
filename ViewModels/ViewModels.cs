@@ -79,3 +79,23 @@ public class CategoryEditViewModel
     [MaxLength(300)] public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
 }
+
+public class PaymentSuccessViewModel
+{
+    public int OrderId { get; set; }
+    public int PaymentId { get; set; }
+    public decimal Amount { get; set; }
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string? TransactionId { get; set; }
+    public DateTime? PaidAt { get; set; }
+}
+
+public class PaymentFailureViewModel
+{
+    public int OrderId { get; set; }
+    public int PaymentId { get; set; }
+    public decimal Amount { get; set; }
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string Reason { get; set; } = "The payment could not be verified.";
+}
+

@@ -1,0 +1,25 @@
+@model PaymentFailureViewModel
+@{ ViewData["Title"] = "Payment failed"; }
+
+<div class="auth-shell">
+    <div class="auth-card text-center">
+        <div class="section-kicker text-danger">PAYMENT NOT COMPLETED</div>
+        <h1 class="section-title mt-2">Payment failed.</h1>
+        <p class="muted">eSewa did not confirm this payment. Your order has not been marked as paid.</p>
+        <div class="alert alert-danger text-start mt-4 mb-3">@Model.Reason</div>
+        <div class="panel text-start">
+            <div class="d-flex justify-content-between mb-2"><span class="muted">Order ID</span><strong>#@Model.OrderId</strong></div>
+            @if (Model.PaymentId > 0)
+            {
+                <div class="d-flex justify-content-between mb-2"><span class="muted">Payment ID</span><strong>#@Model.PaymentId</strong></div>
+            }
+            <div class="d-flex justify-content-between mb-2"><span class="muted">Amount</span><strong>Rs. @Model.Amount.ToString("N2")</strong></div>
+            <div class="d-flex justify-content-between"><span class="muted">Status</span><strong class="text-danger">NOT PAID</strong></div>
+        </div>
+        <p class="small muted mt-3">If no money was deducted, return to the order and try again. If money was deducted but this page says failed, verify the transaction in your eSewa UAT account before retrying.</p>
+        <div class="d-flex gap-2 justify-content-center mt-4">
+            <a asp-controller="Orders" asp-action="Details" asp-route-id="@Model.OrderId" class="btn btn-coral rounded-pill">Back to order</a>
+            <a asp-controller="Orders" asp-action="Index" class="btn btn-outline-dark rounded-pill">My orders</a>
+        </div>
+    </div>
+</div>
